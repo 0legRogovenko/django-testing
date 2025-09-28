@@ -1,63 +1,44 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
 from django.urls import reverse
 
 from notes.forms import NoteForm
-from notes.models import Note
+from .base import BaseTestCase
 
-
-User = get_user_model()
-
-
-class BaseTestCase(TestCase):
-    """Базовый класс с общими данными и клиентами."""
-
-    @classmethod
-    def setUpTestData(cls):
-        """Создание тестовых данных перед запуском тестов."""
-        cls.author = User.objects.create(username='Олег Роговенко')
-        cls.reader = User.objects.create(username='Анна Путилина')
-        cls.note = Note.objects.create(
-            title='Заголовок',
-            text='Текст',
-            author=cls.author,
-        )
-        cls.form = NoteForm()
-
-        cls.author_client = cls.client_class()
-        cls.author_client.force_login(cls.author)
-
-        cls.reader_client = cls.client_class()
-        cls.reader_client.force_login(cls.reader)
-
-        cls.list_url = reverse('notes:list')
-        cls.add_url = reverse('notes:add')
-        cls.edit_url = reverse('notes:edit', args=(cls.note.slug,))
+LIST_URL = reverse('notes:list')
+ADD_URL = reverse('notes:add')
 
 
 class TestContent(BaseTestCase):
     """Тестирование контента страниц приложения заметок."""
 
-    def test_note_list_context(self):
-        """Проверка наличия заметки в списке заметок автора."""
-        response = self.author_client.get(self.list_url)
-        object_list = response.context['object_list']
-        self.assertIn(self.note, object_list)
+    @classmethod
+    def setUpClass(cls):
+        """Добавляет урл редактирования,
+        зависящий от slug созданной заметки.
+        """
+        super().setUpClass()
+        cls.edit_url = reverse('notes:edit', args=(cls.note.slug,))
 
-        note_from_context = object_list[0]
-        self.assertEqual(note_from_context.title, self.note.title)
-        self.assertEqual(note_from_context.text, self.note.text)
-        self.assertEqual(note_from_context.author, self.note.author)
-        self.assertEqual(note_from_context.slug, self.note.slug)
+    def test_note_list_context(self):
+        """Автор видит свою заметку в списке заметок."""
+        response = self.author_client.get(LIST_URL)
+        notes = response.context['object_list']
+        self.assertIn(self.note, notes)
+
+        note = next(n for n in notes if n.pk == self.note.pk)
+        self.assertEqual(note.title, self.note.title)
+        self.assertEqual(note.text, self.note.text)
+        self.assertEqual(note.author, self.note.author)
+        self.assertEqual(note.slug, self.note.slug)
 
     def test_outside_notes(self):
-        """Читатель не видит чужие заметки в списке."""
-        response = self.reader_client.get(self.list_url)
+        """Читатель не видит чужие заметки в своём списке."""
+        response = self.reader_client.get(LIST_URL)
         self.assertNotIn(self.note, response.context['object_list'])
 
     def test_form_on_add_and_edit(self):
         """На страницах добавления и редактирования есть форма NoteForm."""
-        for url in (self.add_url, self.edit_url):
-            response = self.author_client.get(url)
-            self.assertIn('form', response.context)
-            self.assertIsInstance(response.context['form'], NoteForm)
+        for url in (ADD_URL, self.edit_url):
+            with self.subTest(url=url):
+                response = self.author_client.get(url)
+                self.assertIn('form', response.context)
+                self.assertIsInstance(response.context['form'], NoteForm)

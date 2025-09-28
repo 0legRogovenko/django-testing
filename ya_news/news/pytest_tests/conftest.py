@@ -1,26 +1,29 @@
+from datetime import timedelta
+
 import pytest
 from django.test.client import Client
 from django.urls import reverse
+from django.utils import timezone
 
 from news.models import Comment, News
 from yanews.settings import NEWS_COUNT_ON_HOME_PAGE
 
 
+FORM_DATA = {'text': 'Текст формы'}
+
+
 @pytest.fixture
 def author(django_user_model):
-    """Фикстура создает автора комментария."""
     return django_user_model.objects.create_user(username='Автор')
 
 
 @pytest.fixture
 def reader(django_user_model):
-    """Фикстура создает пользователя-читателя."""
     return django_user_model.objects.create_user(username='Читатель')
 
 
 @pytest.fixture
 def news():
-    """Фикстура создает тестовую новость."""
     return News.objects.create(
         title='Заголовок',
         text='Текст новости',
@@ -29,7 +32,6 @@ def news():
 
 @pytest.fixture
 def comment(news, author):
-    """Фикстура создает тестовый комментарий."""
     return Comment.objects.create(
         news=news,
         author=author,
@@ -39,7 +41,6 @@ def comment(news, author):
 
 @pytest.fixture
 def author_client(author):
-    """Фикстура создает клиент с авторизацией автора комментария."""
     client = Client()
     client.force_login(author)
     return client
@@ -47,74 +48,62 @@ def author_client(author):
 
 @pytest.fixture
 def reader_client(reader):
-    """Фикстура создает клиент с авторизацией пользователя-читателя."""
     client = Client()
     client.force_login(reader)
     return client
 
 
 @pytest.fixture
-def many_news():
-    """Фикстура создает расширенный список новостей.
-
-    Создает на 2 новости больше, чем задано
-    в настройках NEWS_COUNT_ON_HOME_PAGE.
-    """
-    news_list = [
-        News.objects.create(
+def many_news(db):
+    """Создаёт больше новостей, чем помещается на главной странице."""
+    today = timezone.now().date()
+    News.objects.bulk_create([
+        News(
             title=f'Новость {i}',
             text='Текст',
+            date=today - timedelta(days=i),
         )
         for i in range(NEWS_COUNT_ON_HOME_PAGE + 2)
-    ]
-    return news_list
+    ])
+    return News.objects.all()
 
 
 @pytest.fixture
 def many_comments(news, author):
-    """Фикстура создает много комментариев к одной новости."""
-    comments = [
-        Comment.objects.create(
+    """Создаёт 222 комментария с разными датами."""
+    now = timezone.now()
+    Comment.objects.bulk_create([
+        Comment(
             news=news,
             author=author,
             text=f'Комментарий {i}',
+            created=now - timedelta(minutes=i),
         )
-        for i in range(20)
-    ]
-    return comments
+        for i in range(222)
+    ])
+    return Comment.objects.filter(news=news)
 
 
 @pytest.fixture
 def detail_url(news):
-    """Фикстура возвращает URL страницы новости."""
     return reverse('news:detail', args=(news.id,))
 
 
 @pytest.fixture
 def edit_url(comment):
-    """Фикстура возвращает URL страницы редактирования комментария."""
     return reverse('news:edit', args=(comment.id,))
 
 
 @pytest.fixture
 def delete_url(comment):
-    """Фикстура возвращает URL страницы удаления комментария."""
     return reverse('news:delete', args=(comment.id,))
 
 
 @pytest.fixture
 def login_url():
-    """Фикстура возвращает URL страницы авторизации."""
     return reverse('users:login')
 
 
 @pytest.fixture
-def form_data():
-    """Фикстура возвращает данные для формы комментария."""
-    return {'text': 'Текст комментария'}
-
-
-@pytest.fixture
-def updated_form_data():
-    """Фикстура возвращает данные для обновления комментария."""
-    return {'text': 'Обновлённый текст'}
+def home_url():
+    return reverse('news:home')
