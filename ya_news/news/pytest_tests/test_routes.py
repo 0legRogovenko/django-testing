@@ -1,87 +1,103 @@
-from http import HTTPStatus
-
 import pytest
 from django.urls import reverse
 
-
-@pytest.mark.django_db
-def test_homepage_available_for_anonymous(client):
-    """Главная страница доступна анонимному пользователю."""
-    url = reverse('news:home')
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
+pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.django_db
-def test_news_detail_available_for_anonymous(client, news):
-    """Страница отдельной новости доступна анонимному пользователю."""
-    url = reverse('news:detail', args=(news.id,))
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
+@pytest.fixture
+def home_url():
+    return reverse('news:home')
 
 
-@pytest.mark.django_db
-def test_comment_edit_delete_available_for_author(author_client, comment):
-    """Страницы редактирования и удаления комментария доступны автору."""
-    edit_url = reverse('news:edit', args=(comment.id,))
-    delete_url = reverse('news:delete', args=(comment.id,))
-    assert author_client.get(edit_url).status_code == HTTPStatus.OK
-    assert author_client.get(delete_url).status_code == HTTPStatus.OK
+@pytest.fixture
+def detail_url(news):
+    return reverse('news:detail', args=(news.id,))
 
 
-@pytest.mark.django_db
-def test_anonymous_redirected_from_edit_delete(client, comment):
-    """Проверка редиректа анонимного пользователя.
-
-    При попытке редактировать или удалить комментарий происходит
-    перенаправление на страницу логина.
-    """
-    edit_url = reverse('news:edit', args=(comment.id,))
-    delete_url = reverse('news:delete', args=(comment.id,))
-    login_url = reverse('users:login')
-
-    response = client.get(edit_url)
-    assert response.status_code == HTTPStatus.FOUND
-    assert response.url == f'{login_url}?next={edit_url}'
-
-    response = client.get(delete_url)
-    assert response.status_code == HTTPStatus.FOUND
-    assert response.url == f'{login_url}?next={delete_url}'
+@pytest.fixture
+def edit_url(comment):
+    return reverse('news:edit', args=(comment.id,))
 
 
-@pytest.mark.django_db
-def test_user_cannot_edit_or_delete_foreign_comment(reader_client, comment):
-    """Проверка доступа к чужим комментариям.
+@pytest.fixture
+def delete_url(comment):
+    return reverse('news:delete', args=(comment.id,))
 
-    Авторизованный пользователь не может редактировать
-    или удалять чужие комментарии.
-    """
-    edit_url = reverse('news:edit', args=(comment.id,))
-    delete_url = reverse('news:delete', args=(comment.id,))
-    assert reader_client.get(edit_url).status_code == HTTPStatus.NOT_FOUND
-    assert reader_client.get(delete_url).status_code == HTTPStatus.NOT_FOUND
+
+@pytest.fixture
+def login_url():
+    return reverse('users:login')
+
+
+@pytest.fixture
+def logout_url():
+    return reverse('users:logout')
 
 
 @pytest.mark.parametrize(
-    'url_name',
-    ('users:signup', 'users:login'),
+    'url_name,method',
+    [
+        ('news:home', 'get'),
+        ('users:signup', 'get'),
+        ('users:login', 'get'),
+        ('users:logout', 'post'),
+    ]
 )
-def test_auth_pages_available_for_anonymous(client, url_name):
-    """Проверка доступности страниц регистрации и входа.
+def test_public_pages_available_for_anonymous(client, url_name, method):
+    """Проверка доступности публичных страниц.
 
-    Тестирование доступности страниц для анонимных пользователей.
+    Главная страница, регистрация, вход и выход
+    должны быть доступны анонимному пользователю.
     """
     url = reverse(url_name)
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
+    response = getattr(client, method)(url)
+    assert response.status_code == 200
 
 
-@pytest.mark.django_db
-def test_logout_page_available_for_anonymous(client):
-    """Проверка доступности страницы выхода.
+def test_news_detail_available_for_anonymous(client, detail_url):
+    """Проверка доступности страницы новости.
 
-    Страница возвращает код 200 OK при POST-запросе.
+    Страница отдельной новости должна быть доступна анонимному пользователю.
     """
-    url = reverse('users:logout')
-    response = client.post(url)
-    assert response.status_code == HTTPStatus.OK
+    response = client.get(detail_url)
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize('url_fixture', ['edit_url', 'delete_url'])
+def test_comment_pages_available_for_author(
+        author_client, request, url_fixture):
+    """Проверка доступности страниц комментария для автора.
+
+    Страницы редактирования и удаления должны быть доступны автору.
+    """
+    url = request.getfixturevalue(url_fixture)
+    response = author_client.get(url)
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize('url_fixture', ['edit_url', 'delete_url'])
+def test_anonymous_redirected_from_edit_delete(
+        client, request, url_fixture, login_url):
+    """Проверка редиректа анонимного пользователя.
+
+    При попытке редактирования или удаления комментария должно происходить
+    перенаправление на страницу авторизации.
+    """
+    url = request.getfixturevalue(url_fixture)
+    response = client.get(url)
+    assert response.status_code == 302
+    expected_url = f"{login_url}?next={url}"
+    assert response.url == expected_url
+
+
+@pytest.mark.parametrize('url_fixture', ['edit_url', 'delete_url'])
+def test_user_cannot_edit_or_delete_foreign_comment(
+        reader_client, request, url_fixture):
+    """Проверка запрета на работу с чужими комментариями.
+
+    Авторизованный пользователь не должен иметь возможности
+    редактировать или удалять чужие комментарии.
+    """
+    url = request.getfixturevalue(url_fixture)
+    response = reader_client.get(url)
+    assert response.status_code == 404
