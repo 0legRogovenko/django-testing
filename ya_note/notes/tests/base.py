@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from pytils.translit import slugify
 
 from notes.models import Note
 
@@ -25,9 +24,12 @@ class BaseTestCase(TestCase):
         cls.note = Note.objects.create(
             title='Заголовок',
             text='Текст',
-            slug=slugify('Заголовок'),
+            slug='slug',
             author=cls.author,
         )
+        cls.EDIT_URL = reverse('notes:edit', args=(cls.note.slug,))
+        cls.DETAIL_URL = reverse('notes:detail', args=(cls.note.slug,))
+        cls.DELETE_URL = reverse('notes:delete', args=(cls.note.slug,))
 
         cls.author_client = cls.client_class()
         cls.author_client.force_login(cls.author)

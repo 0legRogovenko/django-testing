@@ -9,9 +9,6 @@ from news.models import Comment, News
 from yanews.settings import NEWS_COUNT_ON_HOME_PAGE
 
 
-FORM_DATA = {'text': 'Текст формы'}
-
-
 @pytest.fixture
 def author(django_user_model):
     return django_user_model.objects.create_user(username='Автор')
@@ -54,34 +51,39 @@ def reader_client(reader):
 
 
 @pytest.fixture
+def login_redirect_to_detail(login_url, detail_url):
+    """URL редиректа на логин при попытке добавления комментария анонимом."""
+    return f'{login_url}?next={detail_url}'
+
+
+@pytest.fixture
 def many_news(db):
     """Создаёт больше новостей, чем помещается на главной странице."""
-    today = timezone.now().date()
-    News.objects.bulk_create([
+    News.objects.bulk_create(
         News(
             title=f'Новость {i}',
             text='Текст',
-            date=today - timedelta(days=i),
+            date=timezone.now().date() - timedelta(days=i),
         )
         for i in range(NEWS_COUNT_ON_HOME_PAGE + 2)
-    ])
-    return News.objects.all()
+    )
 
 
 @pytest.fixture
 def many_comments(news, author):
     """Создаёт 222 комментария с разными датами."""
-    now = timezone.now()
-    Comment.objects.bulk_create([
+    comments = Comment.objects.bulk_create([
         Comment(
             news=news,
             author=author,
             text=f'Комментарий {i}',
-            created=now - timedelta(minutes=i),
         )
         for i in range(222)
     ])
-    return Comment.objects.filter(news=news)
+    comments = list(Comment.objects.filter(news=news).order_by('id'))
+    for i, comment in enumerate(comments):
+        comment.created = timezone.now() - timedelta(minutes=i)
+    Comment.objects.bulk_update(comments, ['created'])
 
 
 @pytest.fixture

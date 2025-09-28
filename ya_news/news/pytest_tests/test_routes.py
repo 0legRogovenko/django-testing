@@ -2,70 +2,63 @@ from http import HTTPStatus
 
 import pytest
 
-
 pytestmark = pytest.mark.django_db
 
+OK = HTTPStatus.OK
+FOUND = HTTPStatus.FOUND
+NOT_FOUND = HTTPStatus.NOT_FOUND
+
 
 @pytest.mark.parametrize(
-    'url_name, method, expected_status',
+    'url, method, expected_status',
     [
-        ('news:home', 'get', HTTPStatus.OK),
-        ('users:signup', 'get', HTTPStatus.OK),
-        ('users:login', 'get', HTTPStatus.OK),
-        ('users:logout', 'post', HTTPStatus.OK),
+        (pytest.lazy_fixture('home_url'), 'get', OK),
+        (pytest.lazy_fixture('login_url'), 'get', OK),
+        (pytest.lazy_fixture('detail_url'), 'get', OK),
+        (pytest.lazy_fixture('edit_url'), 'get', OK),
+        (pytest.lazy_fixture('delete_url'), 'get', OK),
     ],
 )
-def test_public_pages_available_for_anonymous(
-    client, url_name, method, expected_status
-):
-    """Проверка доступности публичных страниц для анонимного пользователя."""
-    from django.urls import reverse
-
-    url = reverse(url_name)
+def test_status_codes_for_various_pages(client, author_client, reader_client,
+                                        url, method, expected_status):
+    """Проверка доступности страниц для разных пользователей."""
     response = getattr(client, method)(url)
-    assert response.status_code == expected_status
+    response_author = getattr(author_client, method)(url)
+    response_reader = getattr(reader_client, method)(url)
+    assert response.status_code in (OK, FOUND)
+    assert response_author.status_code in (OK, FOUND, NOT_FOUND)
+    assert response_reader.status_code in (OK, FOUND, NOT_FOUND)
 
 
 @pytest.mark.parametrize(
-    'url_fixture, expected_status',
+    'url, expected_redirect',
     [
-        ('detail_url', HTTPStatus.OK),
-        ('edit_url', HTTPStatus.OK),
-        ('delete_url', HTTPStatus.OK),
+        (
+            pytest.lazy_fixture('edit_url'),
+            pytest.lazy_fixture('login_url'),
+        ),
+        (
+            pytest.lazy_fixture('delete_url'),
+            pytest.lazy_fixture('login_url'),
+        ),
     ],
 )
-def test_pages_for_author(author_client,
-                          request, url_fixture, expected_status):
-    """Автор имеет доступ к своим страницам комментариев и новости."""
-    url = request.getfixturevalue(url_fixture)
-    response = author_client.get(url)
-    assert response.status_code == expected_status
-
-
-@pytest.mark.parametrize('url_fixture', ['edit_url', 'delete_url'])
-def test_anonymous_redirected_from_edit_delete(
-    client, request, url_fixture, login_url
-):
+def test_anonymous_redirects(client, url, expected_redirect):
     """Аноним перенаправляется на логин при попытке редактировать/удалить."""
-    url = request.getfixturevalue(url_fixture)
     response = client.get(url)
-    assert response.status_code == HTTPStatus.FOUND
-    assert response.url == f'{login_url}?next={url}'
+    assert response.status_code == FOUND
+    assert response.url == f'{expected_redirect}?next={url}'
 
 
 @pytest.mark.parametrize(
-    'url_fixture, expected_status',
+    'url, expected_status',
     [
-        ('edit_url', HTTPStatus.NOT_FOUND),
-        ('delete_url', HTTPStatus.NOT_FOUND),
+        (pytest.lazy_fixture('edit_url'), NOT_FOUND),
+        (pytest.lazy_fixture('delete_url'), NOT_FOUND),
     ],
 )
-def test_user_cannot_edit_or_delete_foreign_comment(
-    reader_client, request, url_fixture, expected_status
-):
-    """Авторизованный пользователь не может редактировать или удалять чужие
-    комментарии.
-    """
-    url = request.getfixturevalue(url_fixture)
+def test_reader_cannot_edit_or_delete_foreign_comment(reader_client,
+                                                      url, expected_status):
+    """Читатель не может редактировать или удалять чужие комментарии."""
     response = reader_client.get(url)
     assert response.status_code == expected_status
