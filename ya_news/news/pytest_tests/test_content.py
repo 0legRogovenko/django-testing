@@ -26,11 +26,9 @@ def test_news_order_on_homepage(client, home_url):
 def test_comments_order_on_detail_page(client, many_comments, detail_url):
     """Комментарии на странице новости отсортированы по возрастанию даты."""
     response = client.get(detail_url)
-    expected = sorted(
-        response.context['news'].comment_set.all(),
-        key=lambda c: c.created
-    )
-    assert list(response.context['news'].comment_set.all()) == expected
+    comments = list(response.context['news'].comment_set.all())
+    created = [c.created for c in comments]
+    assert created == sorted(created)
 
 
 def test_comment_form_not_visible_for_anonymous(client, detail_url):
