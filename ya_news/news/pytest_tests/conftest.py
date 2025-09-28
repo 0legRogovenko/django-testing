@@ -72,16 +72,18 @@ def many_news(db):
 @pytest.fixture
 def many_comments(news, author):
     """Создаёт 222 комментария с разными датами."""
-    Comment.objects.bulk_create([
+    comments = Comment.objects.bulk_create(
         Comment(
             news=news,
             author=author,
             text=f'Комментарий {i}',
         )
         for i in range(222)
-    ])
-    comments = list(Comment.objects.filter(news=news).order_by('id'))
-    for i, comment in enumerate(comments):
+    )
+    list(Comment.objects.filter(news=news).order_by('id'))
+    for i, comment in enumerate(
+        list(Comment.objects.filter(news=news).order_by('id'))
+    ):
         comment.created = timezone.now() - timedelta(minutes=i)
     Comment.objects.bulk_update(comments, ['created'])
 
@@ -109,3 +111,13 @@ def login_url():
 @pytest.fixture
 def home_url():
     return reverse('news:home')
+
+
+@pytest.fixture
+def login_url_with_edit(login_url, edit_url):
+    return f'{login_url}?next={edit_url}'
+
+
+@pytest.fixture
+def login_url_with_delete(login_url, delete_url):
+    return f'{login_url}?next={delete_url}'
