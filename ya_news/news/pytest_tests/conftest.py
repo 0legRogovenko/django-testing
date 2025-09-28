@@ -80,7 +80,6 @@ def many_comments(news, author):
         )
         for i in range(222)
     ])
-    comments = list(Comment.objects.filter(news=news).order_by('id'))
     for i, comment in enumerate(comments):
         comment.created = timezone.now() - timedelta(minutes=i)
     Comment.objects.bulk_update(comments, ['created'])

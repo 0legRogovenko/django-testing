@@ -8,39 +8,53 @@ OK = HTTPStatus.OK
 FOUND = HTTPStatus.FOUND
 NOT_FOUND = HTTPStatus.NOT_FOUND
 
+# Константы для фикстур
+HOME_URL = pytest.lazy_fixture('home_url')
+LOGIN_URL = pytest.lazy_fixture('login_url')
+DETAIL_URL = pytest.lazy_fixture('detail_url')
+EDIT_URL = pytest.lazy_fixture('edit_url')
+DELETE_URL = pytest.lazy_fixture('delete_url')
+
 
 @pytest.mark.parametrize(
-    'url, method, expected_status',
+    'client_fixture, url, method, expected_status',
     [
-        (pytest.lazy_fixture('home_url'), 'get', OK),
-        (pytest.lazy_fixture('login_url'), 'get', OK),
-        (pytest.lazy_fixture('detail_url'), 'get', OK),
-        (pytest.lazy_fixture('edit_url'), 'get', OK),
-        (pytest.lazy_fixture('delete_url'), 'get', OK),
+        ('client', HOME_URL, 'get', OK),
+        ('author_client', HOME_URL, 'get', OK),
+        ('reader_client', HOME_URL, 'get', OK),
+
+        ('client', LOGIN_URL, 'get', OK),
+        ('author_client', LOGIN_URL, 'get', OK),
+        ('reader_client', LOGIN_URL, 'get', OK),
+
+        ('client', DETAIL_URL, 'get', OK),
+        ('author_client', DETAIL_URL, 'get', OK),
+        ('reader_client', DETAIL_URL, 'get', OK),
+
+        ('client', EDIT_URL, 'get', FOUND),
+        ('author_client', EDIT_URL, 'get', OK),
+        ('reader_client', EDIT_URL, 'get', NOT_FOUND),
+
+        ('client', DELETE_URL, 'get', FOUND),
+        ('author_client', DELETE_URL, 'get', OK),
+        ('reader_client', DELETE_URL, 'get', NOT_FOUND),
     ],
 )
-def test_status_codes_for_various_pages(client, author_client, reader_client,
+def test_status_codes_for_various_pages(request, client_fixture,
                                         url, method, expected_status):
-    """Проверка доступности страниц для разных пользователей."""
+    """Проверка доступности страниц
+    для разных пользователей с точным кодом возврата.
+    """
+    client = request.getfixturevalue(client_fixture)
     response = getattr(client, method)(url)
-    response_author = getattr(author_client, method)(url)
-    response_reader = getattr(reader_client, method)(url)
-    assert response.status_code in (OK, FOUND)
-    assert response_author.status_code in (OK, FOUND, NOT_FOUND)
-    assert response_reader.status_code in (OK, FOUND, NOT_FOUND)
+    assert response.status_code == expected_status
 
 
 @pytest.mark.parametrize(
     'url, expected_redirect',
     [
-        (
-            pytest.lazy_fixture('edit_url'),
-            pytest.lazy_fixture('login_url'),
-        ),
-        (
-            pytest.lazy_fixture('delete_url'),
-            pytest.lazy_fixture('login_url'),
-        ),
+        (EDIT_URL, LOGIN_URL),
+        (DELETE_URL, LOGIN_URL),
     ],
 )
 def test_anonymous_redirects(client, url, expected_redirect):
@@ -48,17 +62,3 @@ def test_anonymous_redirects(client, url, expected_redirect):
     response = client.get(url)
     assert response.status_code == FOUND
     assert response.url == f'{expected_redirect}?next={url}'
-
-
-@pytest.mark.parametrize(
-    'url, expected_status',
-    [
-        (pytest.lazy_fixture('edit_url'), NOT_FOUND),
-        (pytest.lazy_fixture('delete_url'), NOT_FOUND),
-    ],
-)
-def test_reader_cannot_edit_or_delete_foreign_comment(reader_client,
-                                                      url, expected_status):
-    """Читатель не может редактировать или удалять чужие комментарии."""
-    response = reader_client.get(url)
-    assert response.status_code == expected_status

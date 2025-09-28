@@ -6,6 +6,7 @@ from notes.models import Note
 
 User = get_user_model()
 
+# Статические урлы
 ADD_URL = reverse('notes:add')
 SUCCESS_URL = reverse('notes:success')
 LIST_URL = reverse('notes:list')
@@ -27,6 +28,8 @@ class BaseTestCase(TestCase):
             slug='slug',
             author=cls.author,
         )
+
+        # Динамические урлы считаем после создания заметки
         cls.EDIT_URL = reverse('notes:edit', args=(cls.note.slug,))
         cls.DETAIL_URL = reverse('notes:detail', args=(cls.note.slug,))
         cls.DELETE_URL = reverse('notes:delete', args=(cls.note.slug,))

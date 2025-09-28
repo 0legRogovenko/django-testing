@@ -16,7 +16,7 @@ def test_news_order_on_homepage(client, home_url):
     """Новости на главной странице отсортированы от новых к старым."""
     response = client.get(home_url)
     expected = sorted(
-        list(response.context['object_list']),
+        response.context['object_list'],
         key=lambda n: n.date,
         reverse=True
     )
@@ -27,7 +27,7 @@ def test_comments_order_on_detail_page(client, many_comments, detail_url):
     """Комментарии на странице новости отсортированы по возрастанию даты."""
     response = client.get(detail_url)
     expected = sorted(
-        list(response.context['news'].comment_set.all()),
+        response.context['news'].comment_set.all(),
         key=lambda c: c.created
     )
     assert list(response.context['news'].comment_set.all()) == expected

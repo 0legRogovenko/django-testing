@@ -1,12 +1,11 @@
 from http import HTTPStatus
-
 from .base import (
     BaseTestCase,
     LIST_URL,
     ADD_URL,
     SUCCESS_URL,
     LOGIN_URL,
-    HOME_URL,
+    HOME_URL
 )
 
 
@@ -39,6 +38,7 @@ class TestNoteRoutes(BaseTestCase):
             (self.author_client, self.EDIT_URL, HTTPStatus.OK),
             (self.reader_client, self.EDIT_URL, HTTPStatus.NOT_FOUND),
             (self.client, self.EDIT_URL, HTTPStatus.FOUND),
+
             (self.author_client, self.DELETE_URL, HTTPStatus.OK),
             (self.reader_client, self.DELETE_URL, HTTPStatus.NOT_FOUND),
             (self.client, self.DELETE_URL, HTTPStatus.FOUND),
@@ -52,16 +52,15 @@ class TestNoteRoutes(BaseTestCase):
 
     def test_anonymous_redirects(self):
         """Анонимный пользователь перенаправляется на логин."""
-        urls = [
-            LIST_URL,
-            ADD_URL,
-            SUCCESS_URL,
-            self.EDIT_URL,
-            self.DELETE_URL,
-            self.DETAIL_URL,
+        cases = [
+            (LIST_URL, f'{LOGIN_URL}?next={LIST_URL}'),
+            (ADD_URL, f'{LOGIN_URL}?next={ADD_URL}'),
+            (SUCCESS_URL, f'{LOGIN_URL}?next={SUCCESS_URL}'),
+            (self.EDIT_URL, f'{LOGIN_URL}?next={self.EDIT_URL}'),
+            (self.DELETE_URL, f'{LOGIN_URL}?next={self.DELETE_URL}'),
+            (self.DETAIL_URL, f'{LOGIN_URL}?next={self.DETAIL_URL}'),
         ]
-        for url in urls:
+        for url, expected_redirect in cases:
             with self.subTest(url=url):
                 response = self.client.get(url)
-                expected_redirect = f'{LOGIN_URL}?next={url}'
                 self.assertRedirects(response, expected_redirect)

@@ -37,7 +37,8 @@ def test_authorized_user_can_add_comment(author_client,
 def test_comment_with_forbidden_words_not_published(author_client,
                                                     detail_url, text):
     """Комментарий с запрещёнными словами не сохраняется (валидация формы)."""
-    response = author_client.post(detail_url, data={'text': text})
+    form_data = {'text': text}   # словарь вынесен за пределы вызова
+    response = author_client.post(detail_url, data=form_data)
     assert response.status_code == HTTPStatus.OK
     assert Comment.objects.count() == 0
     form = response.context['form']
