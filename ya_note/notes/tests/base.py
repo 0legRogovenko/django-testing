@@ -6,7 +6,6 @@ from notes.models import Note
 
 User = get_user_model()
 
-# Статические урлы
 ADD_URL = reverse('notes:add')
 SUCCESS_URL = reverse('notes:success')
 LIST_URL = reverse('notes:list')

@@ -8,7 +8,6 @@ OK = HTTPStatus.OK
 FOUND = HTTPStatus.FOUND
 NOT_FOUND = HTTPStatus.NOT_FOUND
 
-# Константы для фикстур
 HOME_URL = pytest.lazy_fixture('home_url')
 LOGIN_URL = pytest.lazy_fixture('login_url')
 DETAIL_URL = pytest.lazy_fixture('detail_url')

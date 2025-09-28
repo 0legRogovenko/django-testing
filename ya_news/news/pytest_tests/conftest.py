@@ -72,7 +72,7 @@ def many_news(db):
 @pytest.fixture
 def many_comments(news, author):
     """Создаёт 222 комментария с разными датами."""
-    comments = Comment.objects.bulk_create([
+    Comment.objects.bulk_create([
         Comment(
             news=news,
             author=author,
@@ -80,6 +80,7 @@ def many_comments(news, author):
         )
         for i in range(222)
     ])
+    comments = list(Comment.objects.filter(news=news).order_by('id'))
     for i, comment in enumerate(comments):
         comment.created = timezone.now() - timedelta(minutes=i)
     Comment.objects.bulk_update(comments, ['created'])
