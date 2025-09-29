@@ -1,5 +1,7 @@
-from http import HTTPStatus
 import pytest
+
+from http import HTTPStatus
+
 
 pytestmark = pytest.mark.django_db
 
@@ -16,6 +18,8 @@ LOGIN_URL = pytest.lazy_fixture('login_url')
 DETAIL_URL = pytest.lazy_fixture('detail_url')
 EDIT_URL = pytest.lazy_fixture('edit_url')
 DELETE_URL = pytest.lazy_fixture('delete_url')
+LOGIN_URL_WITH_EDIT = pytest.lazy_fixture('login_url_with_edit')
+LOGIN_URL_WITH_DELETE = pytest.lazy_fixture('login_url_with_delete')
 
 
 @pytest.mark.parametrize(
@@ -47,18 +51,18 @@ def test_status_codes_for_various_pages(client_fixture,
     """Проверка доступности страниц
     для разных пользователей с точным кодом возврата.
     """
-    response = getattr(client_fixture, method)(url)
-    assert response.status_code == expected_status
+    assert getattr(
+        client_fixture, method
+    )(url).status_code == expected_status
 
 
 @pytest.mark.parametrize(
     'url, expected_redirect',
     [
-        (EDIT_URL, pytest.lazy_fixture('login_url_with_edit')),
-        (DELETE_URL, pytest.lazy_fixture('login_url_with_delete')),
+        (EDIT_URL, LOGIN_URL_WITH_EDIT),
+        (DELETE_URL, LOGIN_URL_WITH_DELETE),
     ],
 )
 def test_anonymous_redirects(client, url, expected_redirect):
     """Аноним перенаправляется на логин при попытке редактировать/удалить."""
-    response = client.get(url)
-    assert response.url == expected_redirect
+    assert client.get(url).url == expected_redirect

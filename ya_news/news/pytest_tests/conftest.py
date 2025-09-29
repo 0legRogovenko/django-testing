@@ -81,7 +81,6 @@ def many_comments(news, author):
         comment.created = comment.created.replace(microsecond=i)
         comments.append(comment)
     Comment.objects.bulk_update(comments, ['created'])
-    return comments
 
 
 @pytest.fixture

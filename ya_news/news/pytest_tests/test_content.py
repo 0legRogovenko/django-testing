@@ -26,7 +26,7 @@ def test_news_order_on_homepage(client, home_url):
 def test_comments_order_on_detail_page(client, many_comments, detail_url):
     """Комментарии на странице новости отсортированы по возрастанию даты."""
     response = client.get(detail_url)
-    comments = list(response.context['news'].comment_set.all())
+    comments = response.context['news'].comment_set.all()
     created = [c.created for c in comments]
     assert created == sorted(created)
 

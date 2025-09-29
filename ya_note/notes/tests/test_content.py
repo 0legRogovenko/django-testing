@@ -1,5 +1,5 @@
 from notes.forms import NoteForm
-from .base import BaseTestCase, ADD_URL, LIST_URL
+from .base import BaseTestCase, ADD_URL, LIST_URL, NOTES_EDIT
 
 
 class TestContent(BaseTestCase):
@@ -23,7 +23,7 @@ class TestContent(BaseTestCase):
 
     def test_form_on_add_and_edit(self):
         """На страницах добавления и редактирования есть форма NoteForm."""
-        for url in (ADD_URL, self.EDIT_URL):
+        for url in (ADD_URL, NOTES_EDIT):
             with self.subTest(url=url):
                 response = self.author_client.get(url)
                 self.assertIn('form', response.context)

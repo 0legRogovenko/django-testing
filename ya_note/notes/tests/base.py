@@ -7,7 +7,7 @@ from notes.models import Note
 User = get_user_model()
 
 
-TEST_NOTE_SLUG = 'slug'
+NOTE_SLUG = 'slug'
 
 ADD_URL = reverse('notes:add')
 SUCCESS_URL = reverse('notes:success')
@@ -15,9 +15,9 @@ LIST_URL = reverse('notes:list')
 LOGIN_URL = reverse('users:login')
 HOME_URL = reverse('notes:home')
 
-NOTES_EDIT = reverse('notes:edit', args=(TEST_NOTE_SLUG,))
-NOTES_DETAIL = reverse('notes:detail', args=(TEST_NOTE_SLUG,))
-NOTES_DELETE = reverse('notes:delete', args=(TEST_NOTE_SLUG,))
+NOTES_EDIT = reverse('notes:edit', args=(NOTE_SLUG,))
+NOTES_DETAIL = reverse('notes:detail', args=(NOTE_SLUG,))
+NOTES_DELETE = reverse('notes:delete', args=(NOTE_SLUG,))
 
 ANON_REDIRECT_LIST = f'{LOGIN_URL}?next={LIST_URL}'
 ANON_REDIRECT_ADD = f'{LOGIN_URL}?next={ADD_URL}'
@@ -41,9 +41,6 @@ class BaseTestCase(TestCase):
             slug='slug',
             author=cls.author,
         )
-        cls.EDIT_URL = NOTES_EDIT
-        cls.DETAIL_URL = NOTES_DETAIL
-        cls.DELETE_URL = NOTES_DELETE
 
         cls.author_client = cls.client_class()
         cls.author_client.force_login(cls.author)
